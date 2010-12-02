@@ -1,0 +1,93 @@
+AUDIO BUTCHER
+by Ilias Karim
+
+CS 476a Music, Computing, and Design
+Stanford University
+
+
+DESCRIPTION:
+
+Audio Butcher is a real-time audio sampling and sequencing application that is minimal and keyboard-based. 
+
+
+INSTALL:
+
+Audio Butcher compiles on Mac OS X 10.6.4. No clue if it compiles on anything else. Try it for yourself! On Mac OS X just run make on the source and run the resulting executable from the command line (see instructions on command line usage below).
+
+
+DEPENDENCIES:
+
+soundflower
+libsndfile
+
+
+COMMAND LINE USAGE:
+
+./butcher
+
+OR 
+
+./butcher --in INPUT_DEVICE --out OUTPUT_DEVICE RECIPE_DIRECTORY
+ex: ./butcher --in 5 --out 3 my_recipe
+
+
+COMMANDS:
+
+Input is 99% keyboard based.
+All commands ARE case sensitive.
+
+	A-Z		Record / cut audio buffers 
+	a-z		Playback / serve audio buffers 
+	1-0		Play with sound effects
+	esc		Cancel and save to /temp					TODO
+	esc esc	Exit	
+
+	_		Load recipe to audio buffers.
+	+		Save recipe to harddisk
+
+Follow these commands with any buffer key ( a-z ):
+
+	` 		Display spectrogram of audio buffer on cutting board
+	~		Save cutting board audio buffer to key
+	del 	Delete that audio buffer
+	enter	Play sample once and then stop (no looping) TODO
+
+Cutting board controls:
+
+	del 		Delete to the left of the marker
+	alt del		Delete to the right of the marker
+
+	+			Increase gain							
+	=			Decrease gain							
+
+	_			Increase pitch							TODO
+	-			Decrease pitch							TODO
+
+	alt -		Reload audio files						REMAP
+	alt =		Save audio buffers to files				REMAP
+
+	[			Shorten start (left)
+	]			Pad start (left)
+
+	{			Shorten end (right)
+	}			Pad end (right)
+
+	alt + [		Clip left of cursor
+	alt + ]		Clip right of cursor
+
+	alt		Roll a loop by holding down while playing back audio buffers	
+			The resulting buffer is mapped to the cutting board.
+
+
+DEVELOPMENT ROADMAP:
+
+	1) Pitch shifting (tried STK.. )
+	
+	Effects
+	Scratching
+	Keyboard graphics?
+
+
+MISC TODO:
+
+	Delete should take a cut off the board
