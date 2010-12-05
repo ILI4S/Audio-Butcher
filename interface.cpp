@@ -10,7 +10,9 @@
 #include "kitchen.h"
 #include "interface.h"
 #include "graphics.h"
+#include "rgbaColors.h"
 
+#include <string>
 #include <GLUT/glut.h>
 #include <iostream>
 
@@ -42,7 +44,7 @@ const unsigned int g_keyboard_table[] = { 16, 22, 4, 17, 19, 24, 20, 8, 14, 15,
 
 unsigned char getBufferId( unsigned char key );
 void drawRow( float x, float y, unsigned int n, unsigned int *n_square );
-void drawKey( float x, float y, float length, float height, unsigned int *n );
+//void drawKey( float x, float y, float length, float height, unsigned int *n );
 
 
 //------------------------------------------------------------------------------
@@ -59,6 +61,10 @@ Keyboard::Keyboard()
 	m_showKeyboard = true;
 	m_fx = false;
 	m_exit = false;
+
+	m_once = false;
+
+	m_playFromMark = 0;
 }
 
 
@@ -66,6 +72,19 @@ Keyboard::Keyboard()
 // Keyboard::key( )
 // Handles keypresses. Is called from GLUT keyboard callbacks
 //------------------------------------------------------------------------------
+
+unsigned int getMarkN( unsigned int key )
+{
+	if ( key == 33 ) return 1;
+	if ( key == 64 ) return 2;
+	if ( key == 35 ) return 3;
+	if ( key == 36 ) return 4;
+	if ( key == 37 ) return 5;
+	if ( key == 94 ) return 6;
+	if ( key == 38 ) return 7;
+	if ( key == 42 ) return 8;
+	if ( key == 40 ) return 9;
+}
 
 void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 {
@@ -98,7 +117,7 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 			g_kitchen.m_cuts[ n_buffer ].clear();
 		}
 	}
-	else if ( m_exit && keyDown && key == 27 ) exit(0);
+	else if ( m_exit && keyDown && key == 27 ) exit(0); // Second consecutive ESC press
 
 	// Exiting requires two consecutive ESC presses
 	m_exit = false;
@@ -110,16 +129,15 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 		unsigned int n_buffer = getBufferId( key );
 	
 		if ( keyDown )
-		{
-			if ( m_fx ) g_kitchen.m_cuts[ n_buffer ].addFx( NULL );
-			g_kitchen.m_blade.startServe( n_buffer, mod == GLUT_ACTIVE_ALT, x, y );
-		}
+			g_kitchen.m_blade.startServe( n_buffer, mod == GLUT_ACTIVE_ALT, m_once, m_loop, m_playFromMark );
 			
 		else // Key up
 		{
 			g_kitchen.m_blade.stopServe( n_buffer, mod == GLUT_ACTIVE_ALT );
-			
-			g_kitchen.m_blade.stopCut( n_buffer ); // In case shift was put down after recording
+
+			// In case shift was put down after recording
+			if ( g_kitchen.m_cuts[ n_buffer ].m_writeOn )			
+				g_kitchen.m_blade.stopCut( n_buffer ); 
 		}
 	}	
 
@@ -127,13 +145,73 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 	// Record cuts
 	else if ( key >= 65 && key <= 90 )
 	{
-		unsigned int n_buffer = getBufferId( key );
+		unsigned int buffer_n = getBufferId( key );
 
 		if ( keyDown )
-			g_kitchen.m_blade.startCut( n_buffer );
+			g_kitchen.m_blade.startCut( buffer_n );
 
 		else // Key up
-			g_kitchen.m_blade.stopCut( n_buffer );
+		{
+			g_kitchen.m_blade.stopCut( buffer_n );
+
+			// In case shift was hit after playing
+			if ( g_kitchen.m_cuts[ buffer_n ].m_readOn 
+				 && !g_kitchen.m_cuts[ buffer_n ].m_loop 			
+				 && !g_kitchen.m_cuts[ buffer_n ].m_once )			
+				g_kitchen.m_blade.stopServe( buffer_n, mod == GLUT_ACTIVE_ALT ); 
+		}
+	}
+
+	// 0 - 10
+	// Jump to read mark if it exists, for playing buffers that are not looped
+	else if ( (key >= 48 && key <= 57) && keyDown )
+	{
+		bool jumpMark = false;
+
+		for ( int i = 0; i < 26; i++ )
+		{
+			Cut * cut = &g_kitchen.m_cuts[i];
+
+			if ( cut->m_readOn && !cut->m_loop )
+			{
+				jumpMark = true;
+				cut->gotoMark( key - 48 );
+			}
+		}
+
+		// If no samples are being played back, jump to the mark on the cutting board
+		if ( !jumpMark && g_kitchen.m_board.m_cut )
+			g_kitchen.m_board.m_cut->gotoMark( key - 48 );
+
+		if ( keyDown ) m_playFromMark = key - 48;
+	}
+	else if ( key >= 48 && key <= 57 ) // Key up
+	{
+		if ( m_playFromMark == key - 48 ) m_playFromMark = 0;
+	}
+
+	// ! @ # $ % ^ & * (
+	// Set mark 1, 2, 3, 4, 5, 6, 7, 8, or 9 
+	else if ( ( key == 33 || key == 64 || key == 35 || key == 36 || key == 37 || key == 94 ||
+			    key == 38 || key == 42 || key == 40 ) && keyDown ) 
+	{
+		unsigned int mark_n = getMarkN( key );
+		bool setMark = false;
+
+		for ( int i = 0; i < 26; i++ )
+		{
+			Cut * cut = &g_kitchen.m_cuts[i];
+
+			if ( cut->m_readOn && !cut->m_loop )
+			{
+				cut->setMark( mark_n );
+				setMark = true;
+			}
+		}
+	
+		// If no samples are being played back to be marked, try marking the cutting board sample
+		if ( !setMark )
+			g_kitchen.m_board.setMark( mark_n );
 	}
 
 	// Shift-Minus
@@ -147,13 +225,29 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 		g_kitchen.freezeIngredients( DEFAULT_INGREDIENTS_DIR );
 
 	
-	// - Decrease gain on cutting board
-	else if ( key == 45 && keyDown ) g_kitchen.m_board.adjustGain( DECREASE );
+	// - Decrease gain 
+	else if ( key == 45 && keyDown ) //g_kitchen.m_board.adjustGain( DECREASE );
+	{
+		for ( int i = 0; i < 26; i++ ) // TODO: make this iterate over ALL playing samples
+		{
+			Cut * cut = &g_kitchen.m_cuts[i];
+
+			// Modify currently playing samples that are not being looped
+			if ( cut->m_readOn && !cut->m_loop ) cut->m_volumeCoef -= GAIN_INC;
+		}
+	}
 
 	// + Increase gain on cutting board
-	else if ( key == 61 && keyDown ) g_kitchen.m_board.adjustGain( INCREASE );
+	else if ( key == 61 && keyDown ) //g_kitchen.m_board.adjustGain( INCREASE );
+	{
+		for ( int i = 0; i < 26; i++ ) // TODO: make this iterate over ALL playing samples
+		{
+			Cut * cut = &g_kitchen.m_cuts[i];
 
-
+			// Modify currently playing samples that are not being looped
+			if ( cut->m_readOn && !cut->m_loop ) cut->m_volumeCoef += GAIN_INC;
+		}
+	}
 	
 	// [ Shorten the start of the cut on the cutting board
 	else if ( key == 91 && keyDown ) 
@@ -180,7 +274,7 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 
 
 	// [space] play the cut on the board
-	else if ( key == 32 && keyDown ) g_kitchen.m_board.playLoopToggle();
+//	else if ( key == 32 && keyDown ) g_kitchen.m_board.playLoopToggle();
 
 	// \ to toggle the keyboard display
 	else if ( key == 92 && keyDown ) m_showKeyboard = !m_showKeyboard;
@@ -209,8 +303,37 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 	// DEL Delete a cut
 	else if ( key == 127 ) m_deleteCut = keyDown;
 
+	// Enter to play a sample once
+	else if ( key == 13 ) 
+	{
+		m_once = keyDown;
 
-	else if ( key == 39 ) m_fx = true;
+		// Play once any samples that are already going (but that are not looping)
+		if ( keyDown )
+		{
+			for ( int i = 0; i < 26; i++ )
+			{
+				if ( g_kitchen.m_cuts[ i ].m_readOn && !g_kitchen.m_cuts[ i ].m_loop )
+					g_kitchen.m_cuts[ i ].m_once = true;
+			}
+		}
+	}
+
+	// Space to loop it
+	else if ( key == 32 ) 
+	{
+		m_loop = keyDown;
+
+		// Loop any samples that are already going (but that are not just playing out once)
+		if ( keyDown )
+		{
+			for ( int i = 0; i < 26; i++ )
+			{
+				if ( g_kitchen.m_cuts[ i ].m_readOn && !g_kitchen.m_cuts[ i ].m_once )
+					g_kitchen.m_cuts[ i ].m_loop = true;
+			}
+		}
+	} 
 
 
 	// Escape Key 
@@ -261,39 +384,31 @@ void drawKey( float x, float y, unsigned int *n )
 {
 	unsigned int bufferIndex = g_keyboard_table[ (*n)++ ];
 	
-	// Empty buffer color
-	float rgb[] = { .5, .5, .5, 1 };
-
+	// Empty buffer color (grey)
+	float *color = (float *) &g_grey_rgba;
+	
 	// Writing (red)
 	if ( g_kitchen.m_cuts[ bufferIndex ].m_writeOn )
-	{
-		rgb[0] = 1; rgb[1] = 0; rgb[2] = 0;
-	}
+		color = (float *) &g_grey_rgba;
 
 	// Playing back (blue)
 	else if ( g_kitchen.m_cuts[ bufferIndex ].m_readOn &&
 			  g_kitchen.m_cuts[ bufferIndex ].m_cutSize )
-	{
-		rgb[0] = 0; rgb[1] = 0; rgb[2] = .8f;
-	}
+		color = (float *) &g_blue_rgba;
 
-	// Trying to playback without buffer
+	// Trying to playback without buffer (black)
 	else if ( g_kitchen.m_cuts[ bufferIndex ].m_readOn )
-	{
-		rgb[0] = 0; rgb[1] = 0; rgb[2] = 0;
-	}	
+		color = (float *) &g_black_rgba;
 
-	// Buffer loaded
+	// Buffer loaded (white)
 	else if ( g_kitchen.m_cuts[ bufferIndex ].m_cutSize )
-	{
-		rgb[0] = 1; rgb[1] = 1; rgb[2] = 1; rgb[3] = .2f;
-	}
+		color = (float *) &g_white_rgba;
 
-	g_glut->drawRect( x, y, KEY_WIDTH, KEY_HEIGHT, rgb );
+	g_glut->drawRect( x, y, KEY_WIDTH, KEY_HEIGHT, color );
 	
 	char letter[2] = { (char) bufferIndex + 65, NULL };
 
-	g_glut->print( x + .1f, y + .1f, (char *) &letter, 0.8f, 0.8f, 0.8f, 1.0f );
+	g_glut->print( x + .1f, y + .1f, (char *) &letter, g_black_rgba );
 }
 
 
@@ -312,9 +427,13 @@ void drawRow( float x, float y, unsigned int n, unsigned int *n_square )
 // 
 //------------------------------------------------------------------------------
 
+bool Mouse::m_showMouse;
+float Mouse::m_x, Mouse::m_y;
 float Mouse::m_initMouseX;
 float Mouse::m_initMouseY;
 Cut Mouse::m_noise;
+float Mouse::m_playbackSpeed;
+
 
 Mouse::Mouse()
 {
@@ -335,17 +454,22 @@ Mouse::Mouse()
 
 void Mouse::motion( int x, int y )
 { 
+	// Set x and y values within bounds
 	if ( y < 0 ) y = 0;
 	else if ( y > g_height ) y = g_height;
 
 	if ( x < 0 ) x = 0;
 	else if ( x > g_width ) x = g_width;
 
-	// TODO: make these values more meaningful
-	if ( m_initMouseX == 1000 && m_initMouseY == 1000 )
+	// Set inital position and display the mouse if it was hidden and unused
+	if ( !m_showMouse )
 	{
-		m_initMouseX = x; m_initMouseY = y;
+		m_initMouseX = x; 
+		m_initMouseY = y;
 	}
+
+	// Update class position
+	m_x = x; m_y = y;
 
 	// TODO: check that the mouse has moved beyond an intitial threshold
 			
@@ -380,34 +504,36 @@ void Mouse::motion( int x, int y )
 	}
 			
 
+	// Change playback speed by mousing up and down
+
 	for ( int i = 0; i < 26; i++ )
 	{
 		Cut * cut = &g_kitchen.m_cuts[i];
 
-		if ( cut->m_readOn )
+		// Apply to every sample that is not being looped
+
+		if ( cut->m_readOn && !cut->m_loop )
 		{
-			// X motion currently unused
-			// TODO: use x motion to scratch a white noise buffer
-			// float xRatio = ( m_initMouseX - x ) / ;
-	
-		//	else yRatio = 
+			// Only show values if there is a buffer being modified
+			m_showMouse = true;
+
 			if ( y < m_initMouseY ) // Slow down playback
 			{
 				float yRatio = (float) y / (float) m_initMouseY;
 				float target = PLAYBACK_SPEED_DEC * yRatio + 1 - PLAYBACK_SPEED_DEC;
-				cut->m_playbackSpeedTarget = target;
+				cut->m_playbackSpeed = target;
 			}
 	
 			else if ( y > m_initMouseY  ) // Speed up playback
 			{
 				float yRatio = (float) (y - m_initMouseY) / (float) (g_height - m_initMouseY);
 				float target = 1 + PLAYBACK_SPEED_INC * yRatio;
-				cut->m_playbackSpeedTarget = target;
+				cut->m_playbackSpeed = target;
 			}
 
-			else cut->m_playbackSpeedTarget = 1.0f; 
+			else cut->m_playbackSpeed = 1.0f; 
 
-
+			m_playbackSpeed = cut->m_playbackSpeed;
 		}
 	}
 }
@@ -421,16 +547,51 @@ void Mouse::motion( int x, int y )
 void Mouse::button( int button, int state, int x, int y )
 {
 	m_initMouseX = m_initMouseY = 1000; // TODO: Make this values more meaningful
-	
-	for ( int i = 0; i < 26; i++ )
-	{
-		Cut * cut = &g_kitchen.m_cuts[i];
+	m_showMouse = false;
 
-		if ( cut->m_readOn ) cut->m_playbackSpeedTarget = 1.0f;
+	// Reset playback speeds for all other samples	
+    if ( button == GLUT_RIGHT_BUTTON )
+	{
+		for ( int i = 0; i < 26; i++ )
+		{
+			Cut * cut = &g_kitchen.m_cuts[i];
+			if ( cut->m_readOn ) cut->m_playbackSpeed = 1.0f;
+		}
 	}
 
 	m_noise.m_readOn = false;
 	m_noise.m_readHead = 0;
 }
 
+
+//-----------------------------------------------------------------------------
+// Mouse::drawMouse( )
+// 
+//-----------------------------------------------------------------------------
+
+void Mouse::draw( )
+{
+	if ( !m_showMouse ) return;
+
+    GLdouble modelMatrix[16];
+    glGetDoublev( GL_MODELVIEW_MATRIX, modelMatrix );
+    GLdouble projMatrix[16];
+    glGetDoublev( GL_PROJECTION_MATRIX, projMatrix );
+    int viewport[4];
+    glGetIntegerv(GL_VIEWPORT,viewport);
+
+	double pos[3];
+
+    gluUnProject( m_x, m_y, 0, modelMatrix, projMatrix, viewport, &pos[0], &pos[1], &pos[2] );
+
+	pos[0] *= 10;
+	pos[1] *= -10;
+
+	g_glut->drawRect( pos[0], pos[1], 1, .5, (float *) &g_black_rgba );
+
+	char speedStr[5];
+	snprintf( speedStr, 5, "%f", m_playbackSpeed );
+
+	g_glut->print( pos[0] + .4, pos[1] + .2, speedStr, (float *) &g_white_rgba );
+}
 

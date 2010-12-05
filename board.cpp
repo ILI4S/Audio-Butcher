@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
 //	board.cpp
+//	Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -63,6 +64,7 @@ CuttingBoard::CuttingBoard( )
 // 
 //-----------------------------------------------------------------------------
 
+
 void CuttingBoard::draw()
 {
 	// Draw the spectrogram if it is rendered
@@ -70,6 +72,37 @@ void CuttingBoard::draw()
 	{
 		m_spectrogram->draw( BOARD_X, BOARD_Y, m_cut->m_tex_id );
 	
+
+		for ( int i = 0; i < 10; i++ )
+		{
+			float pos = m_cut->m_marks[ i ];
+		
+			// Only show the marker if it is within bounds (not at start)
+			// Unless it is the origin marker
+			if ( ( pos > m_cut->m_start && pos < m_cut->m_cutSize ) || i == 0 )
+			{
+				float x = (((float) pos - m_cut->m_start) / 
+							(float) (m_cut->m_cutSize - m_cut->m_start) )
+							* BOARD_WIDTH + BOARD_X;
+
+		/*		cout << "printing mark " << i << " with x " << x << endl; */
+				
+//j				char number[1];
+//				number = itoa( i, number, 10 );
+
+				ostringstream number;
+				number << i;
+
+				g_glut->print( x, 4, number.str().c_str(), g_white_rgba );
+
+				glBegin( GL_LINES );
+				glColor3f( 0, 0, 0 );
+				glVertex2f( x, 4 );
+				glVertex2f( x, -4 );
+				glEnd();
+			}
+		}
+
 		// Draw current playback line
 		if ( m_cut->m_readHead )
 		{
@@ -77,12 +110,13 @@ void CuttingBoard::draw()
 						(float) (m_cut->m_cutSize - m_cut->m_start) )
 					  * BOARD_WIDTH + BOARD_X;
 
-			glColor3f( 1, 1, 1 );
 			glBegin( GL_LINES );
+			glColor3f( 1, 1, 1 );
 			glVertex2f( x, 4 );
 			glVertex2f( x, -4 );
-			glEnd();
 		}
+
+		glEnd();
 	}
 
 	// Draw a blank black square that may be bordered by the red, loop-rolling bg
@@ -224,12 +258,14 @@ void CuttingBoard::adjustGain( bool increase )
 	if ( !m_cut ) return;
 
 	if ( increase ) 
-		if ( m_cut->m_readOn ) m_cut->m_volumeCoefTarget += GAIN_INC;
-		else m_cut->m_volumeCoef += GAIN_INC;
+		m_cut->m_volumeCoef += GAIN_INC;
+//		if ( m_cut->m_readOn ) m_cut->m_volumeCoefTarget += GAIN_INC;
+//		else m_cut->m_volumeCoef += GAIN_INC;
 
 	else 
-		if ( m_cut->m_readOn ) m_cut->m_volumeCoefTarget -= GAIN_INC;
-		else m_cut->m_volumeCoef -= GAIN_INC;
+		m_cut->m_volumeCoef -= GAIN_INC;
+//		if ( m_cut->m_readOn ) m_cut->m_volumeCoefTarget -= GAIN_INC;
+//		else m_cut->m_volumeCoef -= GAIN_INC;
 
 //	m_cut->m_tex_id = m_spectrogram->generateTexture( m_cut );
 }
@@ -284,17 +320,20 @@ void CuttingBoard::adjustCursor( int direction )
 
 	if ( direction == LEFT ) // Reverse halfspeed playback
 	{
-		g_kitchen.m_board.m_cut->m_playbackSpeedTarget = -.5f;
+		//g_kitchen.m_board.m_cut->m_playbackSpeedTarget = -.5f;
+		g_kitchen.m_board.m_cut->m_playbackSpeed = -.5f;
 		g_kitchen.m_board.m_cut->m_readOn = true;
 		cout << "LEFT";
 	}	
 	else if ( direction == RIGHT ) // Forward slowed playback
 	{
-		g_kitchen.m_board.m_cut->m_playbackSpeedTarget = .5f;
+		//g_kitchen.m_board.m_cut->m_playbackSpeedTarget = .5f;
+		g_kitchen.m_board.m_cut->m_playbackSpeed = .5f;
 		g_kitchen.m_board.m_cut->m_readOn = true;
 	}
 	else
 	{
+		//g_kitchen.m_board.m_cut->m_playbackSpeedTarget = 1;
 		g_kitchen.m_board.m_cut->m_playbackSpeed = 1;
 		g_kitchen.m_board.m_cut->m_readOn = false;
 	}
@@ -321,15 +360,15 @@ void CuttingBoard::chop( int direction )
 }
 
 //-----------------------------------------------------------------------------
-// CuttingBoard::playLoopToggle( )
-// 
+// CuttingBoard::setMark( )
+//
 //-----------------------------------------------------------------------------
 
-void CuttingBoard::playLoopToggle()
+void CuttingBoard::setMark( unsigned int i )
 {
-	if ( !m_cut ) return;
-	m_cut->m_readOn = !m_cut->m_readOn;
-	m_cut->m_playbackSpeedTarget = 1;
+	if ( !m_cut || i > 9 ) return;
+
+	m_cut->setMark( i );
 }
 
 

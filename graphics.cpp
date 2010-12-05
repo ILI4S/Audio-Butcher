@@ -41,9 +41,9 @@ GLsizei g_height = DEFAULT_WINDOW_HEIGHT;
 // 
 //-----------------------------------------------------------------------------
 
-void GLUT::drawRect( float x, float y, float length, float height, float * rgb )
+void GLUT::drawRect( float x, float y, float length, float height, const float rgba[4] )
 {
-	glColor4f( rgb[0], rgb[1], rgb[2], rgb[3] );
+	glColor4f( rgba[0], rgba[1], rgba[2], rgba[3] );
 
 	glRectf( x, 			y, 
 			 x + length, 	y + height ); 
@@ -65,6 +65,8 @@ void GLUT::displayFunc()
 
 	g_keyboard.drawKeyboard( -6.35, 2 );
 //	g_keyboard.drawKeyboard( -6.35, 2 );
+	
+	g_mouse.draw();
 
     glutSwapBuffers(); // Swap double buffer
 }
@@ -75,11 +77,11 @@ void GLUT::displayFunc()
 // 
 //-----------------------------------------------------------------------------
 
-void GLUT::print( float x, float y, char* text, float r, float g, float b, float a ) 
+void GLUT::print( float x, float y, const char * text, const float rgba[4] ) 
 { 
     if ( !text || !strlen(text) ) return; 
 
-    glColor4f( r, g, b, a ); 
+    glColor4f( rgba[0], rgba[1], rgba[2], rgba[3] ); 
     glRasterPos2f( x, y ); 
     while ( *text ) { 
         glutBitmapCharacter( GLUT_FONT, *text ); 

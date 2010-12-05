@@ -9,6 +9,8 @@
 #include <string>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -55,10 +57,46 @@ void Kitchen::thawIngredients( const char* path )
 		struct stat stFileInfo;
 
 		if ( !stat( filename.c_str(), &(stFileInfo) ) )
-
+		{
 			m_cuts[i].thaw( filename.c_str() );
+			
+		}
 	}
 
+	ifstream paramFile;
+	string paramFilename = string( path ) + string( "/recipe.txt" );
+	paramFile.open( paramFilename.c_str() );
+		
+	for ( int i = 0; i < 26; i++ )
+	{
+		if ( paramFile.is_open() && paramFile.good() ) 
+		{
+			string line;
+			getline( paramFile, line ); 
+
+			// A:
+			// [volume coefficient]
+			// [playback rate]
+			if ( line[1] == ':' )
+			{
+				string volumeLine, speedLine;
+				float volume = 1.0f, speed = 1.0f;
+
+				// Read volume data from file 
+				getline( paramFile, volumeLine ); 
+				sscanf( volumeLine.c_str(), "%f", &volume );
+
+				// Read playback speed data from file 
+				getline( paramFile, speedLine ); 
+				sscanf( speedLine.c_str(), "%f", &speed );
+
+				// Store values in correct objects
+				unsigned int index = (unsigned int) (line[0] - 65);
+				m_cuts[ index ].m_volumeCoef = volume;
+				m_cuts[ index ].m_playbackSpeed = speed;
+			}
+		}
+	}
 }
 
 
@@ -69,9 +107,16 @@ void Kitchen::thawIngredients( const char* path )
 
 void Kitchen::freezeIngredients( const char* path )
 {
+	// Make the directory in case it doesn't exist
 	mkdir( path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH );
 	
+	// Delete files in the directory, in case they exist
 	cleanFridge( path );
+
+	// Open a file to save the sample parameters
+	ofstream paramFile;
+	string paramFilename = string( path ) + string( "/recipe.txt" );
+	paramFile.open( paramFilename.c_str() );
 
 	// Iterate over each cut
 	for ( int i = 0; i < 26; i++ )
@@ -82,8 +127,18 @@ void Kitchen::freezeIngredients( const char* path )
 			string filename = string( path ) + (char) (i + 65) + ".wav";
 
 			m_cuts[i].freeze( filename.c_str() );
+
+			if ( paramFile.is_open() )
+			{
+				paramFile << (char) (i + 65) << ":" << endl;
+				paramFile << m_cuts[i].m_volumeCoef << endl;
+				paramFile << m_cuts[i].m_playbackSpeed << endl;
+			}
 		}
+
 	}
+	
+	paramFile.close();
 }
 
 
@@ -100,5 +155,7 @@ void Kitchen::cleanFridge( const char* path )
 		
 		remove( filename.c_str() );
 	}	
+
+	remove( "recipe.txt" );
 }
 

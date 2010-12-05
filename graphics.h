@@ -28,9 +28,11 @@ public:
 	// Constructor
 	GLUT( int argc, char ** argv );
 	
-	void drawRect( float x, float y, float length, float height, float * rgb );
+	void drawRect( float x, float y, float length, float height, const float rgba[4] );
 
-	static void print( float x, float y, char* text, float r, float g, float b, float a );
+	void print( float x, float y, const char * text, const float rgba[4] );
+
+//	static void print( float x, float y, char* text, float r, float g, float b, float a );
 
 
 private: 

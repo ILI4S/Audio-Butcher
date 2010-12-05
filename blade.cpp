@@ -81,6 +81,10 @@ void Blade::stopCut( unsigned int n_buffer )
 	cut->m_start = 0; // Fresh cut
 
 	cout << "Finished writing to buffer " << n_buffer << endl;
+
+	// Refresh spectrogram texture if on the cutting board
+	if ( g_kitchen.m_board.m_cut == cut ) 
+		cut->m_tex_id = g_kitchen.m_board.m_spectrogram->generateTexture( cut );
 }
 
 
@@ -89,7 +93,8 @@ void Blade::stopCut( unsigned int n_buffer )
 // 
 //------------------------------------------------------------------------------
 
-void Blade::startServe( unsigned int n_buffer, bool record, int x, int y )
+void Blade::startServe( unsigned int n_buffer, bool record, bool once, bool loop,
+						unsigned int mark )
 {
 	// Start or stop rolling a loop
 	g_kitchen.m_board.rollLoop( record, false );
@@ -99,11 +104,17 @@ void Blade::startServe( unsigned int n_buffer, bool record, int x, int y )
 	// Retrieve the correct audio buffer
 	Cut *cut = &g_kitchen.m_cuts[ n_buffer ];
 
-	cut->m_playbackSpeed = cut->m_playbackSpeedTarget = 1.0f;
+	cut->m_once = once;
+	cut->m_loop = loop;
 
 	if ( cut->m_readOn ) return;
 
-	cut->m_readHead = 0; // Reset read head
+	// Reset read head to indicated mark
+	if ( cut->m_marks[ mark ] < cut->m_cutSize && cut->m_marks[ mark ] > cut->m_start )
+		cut->m_readHead = cut->m_marks[ mark ];
+	else 
+		cut->m_readHead = 0; 
+
 	cut->m_readOn = true; // Begin reading from buffer
 
 	cout << "Reading from buffer " << n_buffer << endl;
@@ -125,10 +136,14 @@ void Blade::stopServe( unsigned int n_buffer, bool record )
 
 	// Retrieve the correct audio buffer
 	Cut *cut = &g_kitchen.m_cuts[ n_buffer ];
+	
+	if ( !cut->m_readOn || cut->m_once || cut->m_loop ) return;
 
-	if ( !cut->m_readOn ) return;
+	//cut->m_readOn = false; // Stop reading from buffer
 
-	cut->m_readOn = false; // Stop reading from buffer
+	// Slowly stop reading from buffer
+	cut->m_closeEnv = true; 
+	cut->m_envFactor = 1.0f; 
 
 	cout << "Finished reading" << endl;
 }
@@ -205,9 +220,12 @@ void Blade::resetCuts()
 // 
 //------------------------------------------------------------------------------
 
-Cut::Cut()
+Cut::Cut() // Constructor
 {
 	clear();
+
+	for ( int i = 0; i < 10; i++ ) // Reset mark positions
+		m_marks[i] = 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -217,8 +235,10 @@ Cut::Cut()
 
 void Cut::clear()
 {
-	m_playbackSpeed = m_playbackSpeedTarget = 1.0f;
-	m_volumeCoef = m_volumeCoefTarget = 0;
+	//m_playbackSpeed = m_playbackSpeedTarget = 1.0f;
+	m_playbackSpeed = 1.0f;
+	//m_volumeCoef = m_volumeCoefTarget = 0;
+	m_volumeCoef = 0;
 
 	m_writeHead = m_readHead = m_cutSize = m_start = 0;
 	m_writeOn = m_readOn = false;
@@ -227,6 +247,11 @@ void Cut::clear()
 		m_buffy[ i ] = 0;
 
 	m_fx = NULL;
+
+	m_loop = m_once = false;
+
+	m_closeEnv = false;
+	m_envFactor = 1.0f;
 }
 
 
@@ -355,20 +380,26 @@ void Cut::writeTick( float sample )
 // 
 //------------------------------------------------------------------------------
 
-void slew( float *val, float target, float inc )
-{
-	if ( *val < target - inc ) *val += inc;
-		
-	else if ( *val > target + inc ) *val -= inc;
-}
-
 // Maybe make this read more than just one tick at once... ala .tick method
 
 float Cut::readTick()
 {
 	if ( !m_readOn ) return 0;
 
-	double sample = m_buffy[ (unsigned int) m_readHead ] * pow( 20, m_volumeCoef );
+	double sample = m_buffy[ (unsigned int) m_readHead ] * pow( 20, m_volumecoef );
+
+	if ( m_closeEnv ) 
+	{
+		sample *= pow( 20, m_envFactor );
+		
+		m_envFactor -= .0001f;
+		cout << m_envFactor << endl;
+		if ( m_envFactor <= 0 )
+		{
+			m_closeEnv = false;
+			m_readOn = false;
+		}
+	}
 
 	if ( m_fx )
 		sample = m_fx->tick( sample );
@@ -376,13 +407,21 @@ float Cut::readTick()
 	m_readHead += m_playbackSpeed;
 	
 	// Slew playback speed
-	slew( &m_playbackSpeed, m_playbackSpeedTarget, PLAYBACK_SLEW_RATE );
+//	slew( &m_playbackSpeed, m_playbackSpeedTarget, PLAYBACK_SLEW_RATE )
 	
 	// Slew volume
-	slew( &m_volumeCoef, m_volumeCoefTarget, VOLUME_SLEW_RATE );
+	//slew( &m_volumeCoef, m_volumeCoefTarget, VOLUME_SLEW_RATE );
 
 	// When playback reaches the end of the used buffer ..
-	if ( m_readHead >= m_cutSize ) m_readHead = m_start;
+	if ( m_readHead >= m_cutSize ) 
+	{
+		m_readHead = m_start;
+	
+		if ( m_once ) 
+		{
+			m_readOn = false;
+		}
+	}
 
 	// When reverse playback reaches the beginning ..
 	if ( m_readHead < m_start ) m_readHead = m_cutSize;
@@ -418,3 +457,33 @@ void Cut::addFx( Sauce * fx )
 }
 
 
+//-----------------------------------------------------------------------------
+// Cut::gotoMark( )
+// 
+//-----------------------------------------------------------------------------
+
+void Cut::gotoMark( unsigned int x )
+{
+	if ( x > 9 ) return;
+
+	if ( m_marks[ x ] < m_start )
+		m_readHead = m_start;
+
+	else if ( m_marks[ x ] < m_cutSize )
+		m_readHead = m_marks[ x ];
+	
+	else m_readHead = 0;
+}
+
+
+//-----------------------------------------------------------------------------
+// Cut::setMark( )
+// 
+//-----------------------------------------------------------------------------
+
+void Cut::setMark( unsigned int x )
+{
+	if ( x > 9 ) return;
+
+	m_marks[ x ] = m_readHead;
+}

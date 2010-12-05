@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
 //	board.h
+//	Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -8,6 +9,7 @@
 #define __BOARD__
 
 #include "blade.h"
+#include "rgbaColors.h"
 #include <GLUT/glut.h>
 
 #define BOARD_X -6.5
@@ -106,6 +108,8 @@ public:
 	// Rolls a combination loop and selects it onto the Board
 	void rollLoop( bool record, bool recut );
 
+	void setMark( unsigned int mark );
+
 	//-------------------------------------------------------------------------
 	// Processing / Modification
 	//-------------------------------------------------------------------------
@@ -124,7 +128,6 @@ public:
 
 	void chop( int direction ); 
 
-	void playLoopToggle();
 
 public:
 

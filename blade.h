@@ -12,10 +12,8 @@
 // Buffer size: seconds of audio at 44100 Hz 
 #define CUT_BUFFER_SIZE 44100 * 2 * 20
 
-#define VOLUME_SLEW_RATE .001f
 #define GAIN_INC .5f 
 
-#define PLAYBACK_SLEW_RATE .01f
 
 #define MIN_PLAYBACK_SPEED .5f
 #define MAX_PLAYBACK_SPEED 2.0f
@@ -26,6 +24,8 @@
 #define PLAYBACK_SPEED_CHANGE 
 
 #define SCRATCH_DISTANCE 44100
+
+#define ENV_DEC_BY .01f
 
 
 //------------------------------------------------------------------------------
@@ -57,13 +57,20 @@ public:
 
 	void addFx( Sauce * fx );
 
+	void gotoMark( unsigned int x );
+	void setMark( unsigned int x );
+
 public:
+	
+	unsigned int m_marks[ 10 ];
+
+	bool m_loop, m_once;
 	
 	unsigned int m_cutSize;
 	unsigned int m_start; 
 	
-	float m_playbackSpeed, m_playbackSpeedTarget;
-	float m_volumeCoef, m_volumeCoefTarget;
+	float m_playbackSpeed;//, m_playbackSpeedTarget;
+	float m_volumeCoef;//, m_volumeCoefTarget;
 
 	// Flag active read or writes
 	bool m_writeOn, m_readOn;
@@ -77,6 +84,8 @@ public:
 
 	unsigned int m_tex_id;		
 
+	bool m_closeEnv;
+	float m_envFactor;
 };
 
 
@@ -102,7 +111,8 @@ public:
 	void stopCut( unsigned int n_buffer );
 
 	// Playback cuts
-	void startServe( unsigned int n_buffer, bool record, int x, int y );
+//	void startServe( unsigned int n_buffer, bool record, int x, int y );
+	void startServe( unsigned int n_buffer, bool record, bool once, bool loop, unsigned int mark );
 	void stopServe( unsigned int n_buffer, bool record );
 
 	void resetCuts();
