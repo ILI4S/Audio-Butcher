@@ -221,10 +221,7 @@ void CuttingBoard::resize( bool extend, bool end )
 	if ( end )
 	{
 		if ( extend && m_cut->m_cutSize < CUT_BUFFER_SIZE - RESIZE_INCREMENT )
-		{
 			m_cut->m_cutSize += RESIZE_INCREMENT;
-			cout << "GOOOOOD" << endl;
-		}
 
 		else if ( !extend && m_cut->m_cutSize - RESIZE_INCREMENT > 0 )
 			m_cut->m_cutSize -= RESIZE_INCREMENT;

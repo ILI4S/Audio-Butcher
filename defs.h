@@ -47,7 +47,7 @@
 #define BOARD_WIDTH BOARD_X * -2
 #define BOARD_HEIGHT BOARD_Y * -2
 
-#define RESIZE_INCREMENT SAMPLE_RATE / 16 
+#define RESIZE_INCREMENT SAMPLE_RATE / 32 
 #define MIN_AUDIO_FRAMES SAMPLE_RATE / 4
 
 // Buffer size: seconds of audio at 44100 Hz 

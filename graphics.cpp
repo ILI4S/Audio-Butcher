@@ -5,6 +5,7 @@
 // 
 //------------------------------------------------------------------------------
 
+#include "defs.h"
 #include "blade.h"
 #include "board.h"
 #include "kitchen.h"

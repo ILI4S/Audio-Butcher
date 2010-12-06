@@ -29,9 +29,11 @@ public:
 	void cleanFridge( const char* path );
 
 	// Load all audio data in a given directory
+	void thawIngredients();
 	void thawIngredients( const char* path );
 
 	// Save all audio data to a given directory
+	void freezeIngredients();
 	void freezeIngredients( const char* path );
 
 	Blade m_blade;
@@ -39,6 +41,8 @@ public:
 	Cut m_cuts[ 26 ]; // 26 alpha letter keys
 
 	CuttingBoard m_board;
+
+	const char *m_directory;
 };
 
 #endif

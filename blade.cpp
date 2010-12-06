@@ -5,6 +5,7 @@
 // 
 //------------------------------------------------------------------------------
 
+#include "stk/Stk.h"
 #include "defs.h"
 #include "blade.h"
 #include "interface.h"
@@ -390,10 +391,29 @@ void Cut::writeTick( float sample )
 
 float Cut::readTick()
 {
+	double sample = 0; // Return value
+
 	if ( !m_readOn ) return 0;
 
-	double sample = m_buffy[ (unsigned int) m_readHead ] * pow( 20, m_volumeCoef );
+/*
+	if ( m_playbackSpeed == 1.0f )
+		sample = m_buffy[ (unsigned int) m_readHead++ ] * pow( 20, m_volumeCoef );
 
+	else
+	{
+		for ( int i = 0; i < m_playbackSpeed; i++ )
+			sample += m_buffy[ (unsigned int) m_readHead + i ] * pow( 20, m_volumeCoef );
+
+		sample = sample / (int) m_playbackSpeed;
+
+		m_readHead += m_playbackSpeed;
+	} */
+	
+	// TODO: have buffer frame values be interpolated by STK
+	
+	sample = m_buffy[ (unsigned int) m_readHead ] * pow( 20, m_volumeCoef );
+	m_readHead += m_playbackSpeed;
+	
 	if ( m_openEnv )
 	{
 		sample *= m_envFactor;
@@ -418,17 +438,6 @@ float Cut::readTick()
 			m_readOn = false;
 		}
 	}
-
-	if ( m_fx )
-		sample = m_fx->tick( sample );
-
-	m_readHead += m_playbackSpeed;
-	
-	// Slew playback speed
-//	slew( &m_playbackSpeed, m_playbackSpeedTarget, PLAYBACK_SLEW_RATE )
-	
-	// Slew volume
-	//slew( &m_volumeCoef, m_volumeCoefTarget, VOLUME_SLEW_RATE );
 
 	// When playback reaches the end of the used buffer ..
 	if ( m_readHead >= m_cutSize ) 

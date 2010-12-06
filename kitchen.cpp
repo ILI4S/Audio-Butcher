@@ -36,6 +36,7 @@ Kitchen g_kitchen;
 
 Kitchen::Kitchen( )
 {
+	m_directory = NULL;
 	// check if DEFAULT_INGREDIENTS_DIR exists, make it if it doesn't
 //		thawIngredients( DEFAULT_INGREDIENTS_DIR ); // If it does, load recipe
 }
@@ -46,8 +47,16 @@ Kitchen::Kitchen( )
 // Load all audio data in a given directory
 //------------------------------------------------------------------------------
 
+void Kitchen::thawIngredients()
+{
+	if ( !m_directory ) thawIngredients( DEFAULT_INGREDIENTS_DIR );
+	else thawIngredients( m_directory );
+}
+
 void Kitchen::thawIngredients( const char* path )
 {
+	if ( !m_directory ) m_directory = path;
+
 	// Try to make the directory (if it doesn't exist) then return if succesful
 	if ( mkdir( path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH ) != -1 )
 		return;
@@ -110,6 +119,12 @@ void Kitchen::thawIngredients( const char* path )
 // freezeIngredients( )
 // Save all audio data to a given directory
 //------------------------------------------------------------------------------
+
+void Kitchen::freezeIngredients()
+{
+	if ( !m_directory ) freezeIngredients( DEFAULT_INGREDIENTS_DIR );
+	else freezeIngredients( m_directory );
+}
 
 void Kitchen::freezeIngredients( const char* path )
 {

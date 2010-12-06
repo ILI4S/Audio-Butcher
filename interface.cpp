@@ -225,12 +225,12 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 	// Shift-Minus
 	// Loads ingredients from default folder 
 	else if ( key == 95 && keyDown )
-		g_kitchen.thawIngredients( DEFAULT_INGREDIENTS_DIR );
+		g_kitchen.thawIngredients();
 
 	// Shift-Plus
 	// Freeze all current ingredients
 	else if ( key == 43 && keyDown )
-		g_kitchen.freezeIngredients( DEFAULT_INGREDIENTS_DIR );
+		g_kitchen.freezeIngredients();
 
 	
 	// - Decrease gain 
