@@ -3,6 +3,8 @@ Copyleft (C) 2010 Ilias Karim
 CS 476a Music, Computing, and Design
 Stanford University
 
+https://ccrma.stanford.edu/~ilias/476a/AudioButcher
+
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation files
 (the "Software"), to deal in the Software without restriction,
@@ -102,6 +104,14 @@ Cutting board controls:
 			The resulting buffer is mapped to the cutting board.
 
 
+
+Audio Butcher slays your audio output and for you to serve your audience premium cuts of ______ audio samples.
+
+Multimedia sampling software, that turns audio and visual output, whinto digital vinyl cuts that can be 
+
+
 TOOD NOW:
 	
 	envelope playback after stopServe -- make not linear?
+
+	cutting board put crashed

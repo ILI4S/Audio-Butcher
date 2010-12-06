@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
 //	graphics.h
+//	Audio Butcher Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -13,7 +14,8 @@
 #define DEFAULT_WINDOW_HEIGHT 600
 
 #define TEXT_BUFFER_SIZE 512
-#define GLUT_FONT GLUT_BITMAP_HELVETICA_18
+#define GLUT_FONT_LARGE GLUT_BITMAP_HELVETICA_18
+#define GLUT_FONT_SMALL GLUT_BITMAP_HELVETICA_12
 
 
 //-----------------------------------------------------------------------------
@@ -30,7 +32,8 @@ public:
 	
 	void drawRect( float x, float y, float length, float height, const float rgba[4] );
 
-	void print( float x, float y, const char * text, const float rgba[4] );
+//	void print( float x, float y, const char * text, const float rgba[4] );
+	void print( float x, float y, const char * text, const float rgba[4], float large = false );
 
 //	static void print( float x, float y, char* text, float r, float g, float b, float a );
 

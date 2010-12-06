@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
-// blade.h
+// 	blade.h
+//	Audio Butcher Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -9,23 +10,9 @@
 
 #include "sauce.h"
 
-// Buffer size: seconds of audio at 44100 Hz 
-#define CUT_BUFFER_SIZE 44100 * 2 * 20
-
-#define GAIN_INC .5f 
-
-
-#define MIN_PLAYBACK_SPEED .5f
-#define MAX_PLAYBACK_SPEED 2.0f
-
-#define PLAYBACK_SPEED_DEC .5f
-#define PLAYBACK_SPEED_INC 1.0f
-
-#define PLAYBACK_SPEED_CHANGE 
 
 #define SCRATCH_DISTANCE 44100
 
-#define ENV_DEC_BY .01f
 
 
 //------------------------------------------------------------------------------
@@ -84,7 +71,8 @@ public:
 
 	unsigned int m_tex_id;		
 
-	bool m_closeEnv;
+	// Enveloping 
+	bool m_openEnv, m_closeEnv;
 	float m_envFactor;
 };
 

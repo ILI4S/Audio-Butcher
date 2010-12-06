@@ -1,17 +1,12 @@
 //------------------------------------------------------------------------------
 //
 //	interface.h
+//	Audio Butcher Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
 #ifndef __KEYBOARD__
 #define __KEYBOARD__
-
-#define KEY_HEIGHT .7f
-#define KEY_WIDTH 1
-#define SPACE_HEIGHT .1f
-#define SPACE_WIDTH .2f
-
 
 //------------------------------------------------------------------------------
 //
@@ -37,6 +32,7 @@ protected:
 	bool m_selectCut, m_putCut, m_deleteCut, m_exit;
 
 	bool m_once, m_loop;
+	bool m_noSampleLooped, m_noSampleOnced;
 
 	bool m_fx;
 

@@ -93,12 +93,12 @@ void CuttingBoard::draw()
 				ostringstream number;
 				number << i;
 
-				g_glut->print( x, 4, number.str().c_str(), g_white_rgba );
+				g_glut->print( x, 3.93, number.str().c_str(), g_white_rgba, true );
 
 				glBegin( GL_LINES );
 				glColor3f( 0, 0, 0 );
-				glVertex2f( x, 4 );
-				glVertex2f( x, -4 );
+				glVertex2f( x, 3.9 );
+				glVertex2f( x, -4.1 );
 				glEnd();
 			}
 		}
@@ -112,8 +112,8 @@ void CuttingBoard::draw()
 
 			glBegin( GL_LINES );
 			glColor3f( 1, 1, 1 );
-			glVertex2f( x, 4 );
-			glVertex2f( x, -4 );
+			glVertex2f( x, 3.9 );
+			glVertex2f( x, -4.1 );
 		}
 
 		glEnd();
@@ -359,6 +359,7 @@ void CuttingBoard::chop( int direction )
 	cout << "eh?";
 }
 
+
 //-----------------------------------------------------------------------------
 // CuttingBoard::setMark( )
 //
@@ -371,6 +372,30 @@ void CuttingBoard::setMark( unsigned int i )
 	m_cut->setMark( i );
 }
 
+
+//-----------------------------------------------------------------------------
+// CuttingBoard::play( )
+// 
+//-----------------------------------------------------------------------------
+
+// TODO: Have this function call a method native to Cut rather than implementing here
+
+void CuttingBoard::play( bool once, bool loop )
+{
+	// Set playback settings: play once, or loop
+	m_cut->m_once = once;
+	m_cut->m_loop = loop;
+
+	// If it is already playing doing nothing
+	if ( m_cut->m_readOn ) return;
+
+	// Begin reading from buffer
+	m_cut->m_readOn = true; 
+	
+	// Start openning playback envelope
+	m_cut->m_openEnv = true;
+	m_cut->m_envFactor = 0.0f;
+}
 
 //------------------------------------------------------------------------------
 //

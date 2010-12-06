@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
 //	interface.cpp
+//	Audio Butcher Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -53,7 +54,7 @@ void drawRow( float x, float y, unsigned int n, unsigned int *n_square );
 // 
 //------------------------------------------------------------------------------
 
-Keyboard::Keyboard()
+Keyboard::Keyboard() // Constructor
 {
 	m_selectCut = false;
 	m_putCut = false;
@@ -63,6 +64,9 @@ Keyboard::Keyboard()
 	m_exit = false;
 
 	m_once = false;
+	m_loop = false;
+	m_noSampleOnced = false;
+	m_noSampleLooped = false;
 
 	m_playFromMark = 0;
 }
@@ -129,7 +133,11 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 		unsigned int n_buffer = getBufferId( key );
 	
 		if ( keyDown )
+		{
 			g_kitchen.m_blade.startServe( n_buffer, mod == GLUT_ACTIVE_ALT, m_once, m_loop, m_playFromMark );
+		
+			m_noSampleLooped = m_noSampleOnced = false;
+		}
 			
 		else // Key up
 		{
@@ -303,7 +311,7 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 	// DEL Delete a cut
 	else if ( key == 127 ) m_deleteCut = keyDown;
 
-	// Enter to play a sample once
+	// ENTER to play a sample once
 	else if ( key == 13 ) 
 	{
 		m_once = keyDown;
@@ -316,10 +324,20 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 				if ( g_kitchen.m_cuts[ i ].m_readOn && !g_kitchen.m_cuts[ i ].m_loop )
 					g_kitchen.m_cuts[ i ].m_once = true;
 			}
+
+			m_noSampleOnced = true;
+		}
+
+		// Playback cutting board sample if nothing was played on keyUp
+		else 
+		{        
+			cout << endl << m_noSampleOnced << endl;
+			if ( m_noSampleOnced && g_kitchen.m_board.m_cut ) 
+				g_kitchen.m_board.play( true, false );
 		}
 	}
 
-	// Space to loop it
+	// SPACE to loop it
 	else if ( key == 32 ) 
 	{
 		m_loop = keyDown;
@@ -332,7 +350,17 @@ void Keyboard::key( unsigned char key, bool keyDown, int mod, int x, int y)
 				if ( g_kitchen.m_cuts[ i ].m_readOn && !g_kitchen.m_cuts[ i ].m_once )
 					g_kitchen.m_cuts[ i ].m_loop = true;
 			}
+
+			m_noSampleLooped = true;
 		}
+
+		// Loop cutting board sample if nothing was played on keyUp
+		else 
+		{
+			if ( m_noSampleLooped && g_kitchen.m_board.m_cut )
+				g_kitchen.m_board.play( false, true );
+		}
+
 	} 
 
 
@@ -389,7 +417,7 @@ void drawKey( float x, float y, unsigned int *n )
 	
 	// Writing (red)
 	if ( g_kitchen.m_cuts[ bufferIndex ].m_writeOn )
-		color = (float *) &g_grey_rgba;
+		color = (float *) &g_red_rgba;
 
 	// Playing back (blue)
 	else if ( g_kitchen.m_cuts[ bufferIndex ].m_readOn &&
@@ -408,7 +436,7 @@ void drawKey( float x, float y, unsigned int *n )
 	
 	char letter[2] = { (char) bufferIndex + 65, NULL };
 
-	g_glut->print( x + .1f, y + .1f, (char *) &letter, g_black_rgba );
+	g_glut->print( x + .1f, y + .1f, (char *) &letter, g_black_rgba, false );
 }
 
 
@@ -592,6 +620,6 @@ void Mouse::draw( )
 	char speedStr[5];
 	snprintf( speedStr, 5, "%f", m_playbackSpeed );
 
-	g_glut->print( pos[0] + .4, pos[1] + .2, speedStr, (float *) &g_white_rgba );
+	g_glut->print( pos[0] + .4, pos[1] + .2, speedStr, (float *) &g_white_rgba, true );
 }
 

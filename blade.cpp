@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
-// blade.cpp
+// 	blade.cpp
+//	Audio Butcher Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -9,6 +10,7 @@
 #include "interface.h"
 #include "kitchen.h"
 #include "sndfile.h"
+
 #include <assert.h>
 #include <samplerate.h>
 #include <iostream>
@@ -80,8 +82,6 @@ void Blade::stopCut( unsigned int n_buffer )
 	cut->m_cutSize = cut->m_writeHead; // Set the length of buffer used
 	cut->m_start = 0; // Fresh cut
 
-	cout << "Finished writing to buffer " << n_buffer << endl;
-
 	// Refresh spectrogram texture if on the cutting board
 	if ( g_kitchen.m_board.m_cut == cut ) 
 		cut->m_tex_id = g_kitchen.m_board.m_spectrogram->generateTexture( cut );
@@ -99,25 +99,29 @@ void Blade::startServe( unsigned int n_buffer, bool record, bool once, bool loop
 	// Start or stop rolling a loop
 	g_kitchen.m_board.rollLoop( record, false );
 	
-	assert( n_buffer <= 25 );
-
 	// Retrieve the correct audio buffer
 	Cut *cut = &g_kitchen.m_cuts[ n_buffer ];
 
+	// Set playback settings: play once, or loop
 	cut->m_once = once;
 	cut->m_loop = loop;
 
+	// If it is already playing doing nothing
 	if ( cut->m_readOn ) return;
 
 	// Reset read head to indicated mark
+	// Make sure mark is in bounds, otherwise start from 0
 	if ( cut->m_marks[ mark ] < cut->m_cutSize && cut->m_marks[ mark ] > cut->m_start )
 		cut->m_readHead = cut->m_marks[ mark ];
 	else 
 		cut->m_readHead = 0; 
 
-	cut->m_readOn = true; // Begin reading from buffer
-
-	cout << "Reading from buffer " << n_buffer << endl;
+	// Begin reading from buffer
+	cut->m_readOn = true; 
+	
+	// Start openning playback envelope
+	cut->m_openEnv = true;
+	cut->m_envFactor = 0.0f;
 }
 
 
@@ -141,7 +145,8 @@ void Blade::stopServe( unsigned int n_buffer, bool record )
 
 	//cut->m_readOn = false; // Stop reading from buffer
 
-	// Slowly stop reading from buffer
+	// Stop reading from buffer by starting the closing envelope
+	// (which decrements to 0 by ENV_FACTOR_STEP_SIZE
 	cut->m_closeEnv = true; 
 	cut->m_envFactor = 1.0f; 
 
@@ -183,12 +188,12 @@ float Blade::readTick()
 	{
 		float t = g_mouse.m_noise.readTick();
 		sample += t;
-		cout << g_mouse.m_noise.m_readHead << " " << t << endl;
+		//cout << g_mouse.m_noise.m_readHead << " " << t << endl;
 	}
 	
 	// Board loop (rolled with ALT combo)
 	if ( g_kitchen.m_board.m_loop.m_readOn ) 
-		sample += g_kitchen.m_board.m_loop.readTick();
+		sample += g_kitchen.m_board.m_loop.readTick() * .5; // To prevent audio clipping
 
 	// Write to the loop if there is one currently being rolled
 	// Idea: why not update the spectrogram every N samples?
@@ -251,6 +256,7 @@ void Cut::clear()
 	m_loop = m_once = false;
 
 	m_closeEnv = false;
+	m_openEnv = false;
 	m_envFactor = 1.0f;
 }
 
@@ -386,14 +392,26 @@ float Cut::readTick()
 {
 	if ( !m_readOn ) return 0;
 
-	double sample = m_buffy[ (unsigned int) m_readHead ] * pow( 20, m_volumecoef );
+	double sample = m_buffy[ (unsigned int) m_readHead ] * pow( 20, m_volumeCoef );
+
+	if ( m_openEnv )
+	{
+		sample *= m_envFactor;
+		
+		m_envFactor += ENV_FACTOR_STEP_SIZE;
+
+		if ( m_envFactor >= 1 )
+		{
+			m_openEnv = false;
+		}
+	}
+
 
 	if ( m_closeEnv ) 
 	{
-		sample *= pow( 20, m_envFactor );
+		sample *= m_envFactor;
 		
-		m_envFactor -= .0001f;
-		cout << m_envFactor << endl;
+		m_envFactor -= ENV_FACTOR_STEP_SIZE;
 		if ( m_envFactor <= 0 )
 		{
 			m_closeEnv = false;

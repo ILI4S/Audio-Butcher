@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
-// kitchen.cpp
+// 	kitchen.cpp
+// 	Audio Butcher Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -36,8 +37,7 @@ Kitchen g_kitchen;
 Kitchen::Kitchen( )
 {
 	// check if DEFAULT_INGREDIENTS_DIR exists, make it if it doesn't
-	if ( mkdir( DEFAULT_INGREDIENTS_DIR, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH ) == -1 )
-		thawIngredients( DEFAULT_INGREDIENTS_DIR ); // If it does, load recipe
+//		thawIngredients( DEFAULT_INGREDIENTS_DIR ); // If it does, load recipe
 }
 
 
@@ -48,6 +48,12 @@ Kitchen::Kitchen( )
 
 void Kitchen::thawIngredients( const char* path )
 {
+	// Try to make the directory (if it doesn't exist) then return if succesful
+	if ( mkdir( path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH ) != -1 )
+		return;
+
+	// Otherwise, there are samples in the given directory to be loaded
+
 	// Iterate over each cut
 	for ( int i = 0; i < 26; i++ )
 	{

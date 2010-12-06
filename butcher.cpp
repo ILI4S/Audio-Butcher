@@ -1,9 +1,11 @@
-//------------------------------------------------------------------------------
-/*
+/*------------------------------------------------------------------------------
+
 	AUDIO BUTCHER
 	Copyleft (C) 2010 Ilias Karim
 	CS 476a Music, Computing, and Design
 	Stanford University
+
+	https://ccrma.stanford.edu/~ilias/476a/AudioButcher
 
     Permission is hereby granted, free of charge, to any person
     obtaining a copy of this software and associated documentation files
@@ -28,9 +30,15 @@
     ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
     CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
     WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
+
+------------------------------------------------------------------------------*/
+
+//------------------------------------------------------------------------------
 //
 //	butcher.cpp	
+//	Audio Butcher Copyleft (C) 2010 Ilias Karim
+//
+//	Entry point
 //
 //------------------------------------------------------------------------------
 
@@ -51,13 +59,14 @@ using namespace std;
 
 
 //------------------------------------------------------------------------------
-// External Global
+// Globals
 //------------------------------------------------------------------------------
 
 // The butcher's workplace
 extern Kitchen g_kitchen;
 
 GLUT * g_glut;
+
 
 //------------------------------------------------------------------------------
 // Prototypes
@@ -70,7 +79,10 @@ typedef struct {
 } CmdLineArgs; 
 
 // Default values for command line parameters 
-const CmdLineArgs g_defaultParams = { DEFAULT_IN_DEVICE, DEFAULT_OUT_DEVICE };
+const CmdLineArgs g_defaultParams = { 
+	DEFAULT_IN_DEVICE, DEFAULT_OUT_DEVICE, 
+	DEFAULT_INGREDIENTS_DIR
+};
 
 
 void printUsage();
@@ -111,7 +123,7 @@ int audioCallback ( void* outBuffer, void* inBuffer, unsigned int nBufferFrames,
 
 int main( int argc, char ** argv )
 {
-	cout << endl << "Welcome to your kitchen!" << endl << endl;
+	cout << endl << "Welcome, Butcher!" << endl << endl;
 	
 	// Parse command line arguments
 	CmdLineArgs params = parseCmdLineArgs( argc, argv );
@@ -122,7 +134,7 @@ int main( int argc, char ** argv )
 
 	if ( audio )
 	{
-		//g_kitchen.m_cuts[0].thaw( "terminator.wav" );	
+		g_kitchen.thawIngredients( params.directory );
 
 		// Start the graphics engine main loop
 	    glutMainLoop();
@@ -144,7 +156,7 @@ CmdLineArgs parseCmdLineArgs ( int argc, char ** argv )
 	CmdLineArgs params = g_defaultParams;
 
 	// Iterate over command-line arguments to check for flags
-	for ( int i = 0; i < argc; i++ )
+	for ( int i = 1; i < argc; i++ )
 	{
 		// --in [input device number]
 		if ( !strcmp( argv[ i ], "--in" ) && argc > i + 1 )

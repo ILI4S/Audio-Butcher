@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
 //	graphics.cpp
+//	Audio Butcher Copyleft (C) 2010 Ilias Karim
 // 
 //------------------------------------------------------------------------------
 
@@ -77,14 +78,15 @@ void GLUT::displayFunc()
 // 
 //-----------------------------------------------------------------------------
 
-void GLUT::print( float x, float y, const char * text, const float rgba[4] ) 
+void GLUT::print( float x, float y, const char * text, const float rgba[4], float large ) 
 { 
     if ( !text || !strlen(text) ) return; 
 
     glColor4f( rgba[0], rgba[1], rgba[2], rgba[3] ); 
     glRasterPos2f( x, y ); 
     while ( *text ) { 
-        glutBitmapCharacter( GLUT_FONT, *text ); 
+        if ( large ) glutBitmapCharacter( GLUT_FONT_LARGE, *text ); 
+        else glutBitmapCharacter( GLUT_FONT_SMALL, *text ); 
         text++; 
     } 
 }  

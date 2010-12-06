@@ -2,7 +2,9 @@
 //
 //	board.h
 //	Copyleft (C) 2010 Ilias Karim
-// 
+//
+// 	Implements cutting board class
+//	 
 //------------------------------------------------------------------------------
 
 #ifndef __BOARD__
@@ -11,14 +13,6 @@
 #include "blade.h"
 #include "rgbaColors.h"
 #include <GLUT/glut.h>
-
-#define BOARD_X -6.5
-#define BOARD_Y -4
-#define BOARD_WIDTH BOARD_X * -2
-#define BOARD_HEIGHT BOARD_Y * -2
-
-#define RESIZE_INCREMENT SAMPLE_RATE / 16 
-#define MIN_AUDIO_FRAMES SAMPLE_RATE / 4
 
 
 //-----------------------------------------------------------------------------
@@ -109,6 +103,8 @@ public:
 	void rollLoop( bool record, bool recut );
 
 	void setMark( unsigned int mark );
+
+	void play( bool once, bool loop );
 
 	//-------------------------------------------------------------------------
 	// Processing / Modification
