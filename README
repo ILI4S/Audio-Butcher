@@ -75,8 +75,8 @@ All commands ARE case sensitive.
 	esc			Save to /temp
 	esc esc		Exit	
 
-	shift -		Reload audio files						
-	shit =		Save audio buffers to files				
+	_			Reload audio files						
+	+			Save audio buffers to files				
 
 	+			Increase gain of playing (but not looping) buffers
 	=			Decrease gain of playing (but not looping) buffers
@@ -87,7 +87,7 @@ All commands ARE case sensitive.
 Follow these commands with any buffer key ( a-z ):
 
 	` 			Display spectrogram of audio buffer on cutting board
-	shift `		Save cutting board audio buffer to key
+	~			Save cutting board audio buffer to key
 	del 		Delete that audio buffer
 	enter		Play sample once and then stop
 	space		Loop sample indefinitely
