@@ -6,6 +6,8 @@
 //------------------------------------------------------------------------------
 
 #include "stk/Stk.h"
+#include "stk/FileRead.h"
+#include "stk/FileWrite.h"
 #include "defs.h"
 #include "blade.h"
 #include "interface.h"
@@ -19,7 +21,7 @@
 #include <math.h>
 
 using namespace std;
-
+using namespace stk;
 
 //-----------------------------------------------------------------------------
 // Globals
@@ -57,6 +59,8 @@ void Blade::startCut( unsigned int n_buffer  )
 
 	if ( cut->m_writeOn ) return;
 
+	cut->clear();
+	
 	cut->m_writeHead = 0; // Reset write head
 	cut->m_writeOn = true; // Begin writing to buffer
 	
@@ -74,18 +78,27 @@ void Blade::stopCut( unsigned int n_buffer )
 	assert( n_buffer <= 25 );
 
 	// Retrieve the correct audio buffer
-	//Cut *cut = &g_cuts[ n_buffer ];
 	Cut *cut = &g_kitchen.m_cuts[ n_buffer ];
 
 	if ( !cut->m_writeOn ) return;
 
 	cut->m_writeOn = false; // Stop writing to the buffer
-	cut->m_cutSize = cut->m_writeHead; // Set the length of buffer used
+
+	// Set the length of buffer used
+	cut->m_cutSize = cut->m_writeHead; 
+	cut->m_n_frames = cut->m_writeHead;
 	cut->m_start = 0; // Fresh cut
+
+	// Transfer data into StkFrames
+	cut->m_frames = new StkFrames( cut->m_n_frames, N_CHANNELS );
+	for ( int i = 0; i < cut->m_cutSize; i++ )
+		(*cut->m_frames)[i] = cut->m_buffy[i];
 
 	// Refresh spectrogram texture if on the cutting board
 	if ( g_kitchen.m_board.m_cut == cut ) 
 		cut->m_tex_id = g_kitchen.m_board.m_spectrogram->generateTexture( cut );
+	else 
+		cut->m_tex_id = 0; // Otherwise just reset the texture
 }
 
 
@@ -103,19 +116,22 @@ void Blade::startServe( unsigned int n_buffer, bool record, bool once, bool loop
 	// Retrieve the correct audio buffer
 	Cut *cut = &g_kitchen.m_cuts[ n_buffer ];
 
+	if ( !cut->m_frames ) return;
+
 	// Set playback settings: play once, or loop
 	cut->m_once = once;
 	cut->m_loop = loop;
 
-	// If it is already playing doing nothing
-	if ( cut->m_readOn ) return;
+	// If it is already playing do nothing
+	//if ( cut->m_readOn ) return;
 
 	// Reset read head to indicated mark
 	// Make sure mark is in bounds, otherwise start from 0
-	if ( cut->m_marks[ mark ] < cut->m_cutSize && cut->m_marks[ mark ] > cut->m_start )
+	/*if ( cut->m_marks[ mark ] < cut->m_cutSize && cut->m_marks[ mark ] > cut->m_start )
 		cut->m_readHead = cut->m_marks[ mark ];
-	else 
-		cut->m_readHead = 0; 
+	else */
+
+	cut->m_readHead = cut->m_start; 
 
 	// Begin reading from buffer
 	cut->m_readOn = true; 
@@ -193,8 +209,8 @@ float Blade::readTick()
 	}
 	
 	// Board loop (rolled with ALT combo)
-	if ( g_kitchen.m_board.m_loop.m_readOn ) 
-		sample += g_kitchen.m_board.m_loop.readTick() * .5; // To prevent audio clipping
+//	if ( g_kitchen.m_board.m_loop.m_readOn ) 
+//		sample += g_kitchen.m_board.m_loop.readTick() * .5; // To prevent audio clipping
 
 	// Write to the loop if there is one currently being rolled
 	// Idea: why not update the spectrogram every N samples?
@@ -234,6 +250,13 @@ Cut::Cut() // Constructor
 		m_marks[i] = 0;
 }
 
+
+Cut::~Cut() // Destructor
+{
+	if ( m_frames ) delete m_frames;
+}
+
+
 //-----------------------------------------------------------------------------
 // Cut::clear( )
 // 
@@ -252,7 +275,11 @@ void Cut::clear()
 	for ( int i = 0; i < CUT_BUFFER_SIZE; i++ )
 		m_buffy[ i ] = 0;
 
-	m_fx = NULL;
+	if ( m_frames ) delete m_frames;
+	m_frames = NULL;
+	m_n_frames = 0;
+
+	//m_fx = NULL;
 
 	m_loop = m_once = false;
 
@@ -269,93 +296,34 @@ void Cut::clear()
 
 void Cut::thaw( const char* path )
 {
-	SF_INFO sf_info;
-	SNDFILE* infile;
+	clear();
 
-//	float buffy[ CUT_BUFFER_SIZE ];	// Temporary buffer to load the soundfile into
-
-	// Open the soundfile
-	if ( !(infile = sf_open( path, SFM_READ, &sf_info ) ) )
-	{
-		cout << "Error: could not open " << path << endl;
-		return;
-	}
+	FileRead thaw;
 	
-	m_cutSize = sf_readf_float( infile, m_buffy, sf_info.frames );
+	thaw.open( path );
 
-	assert( sf_info.channels == N_CHANNELS );
-	assert( sf_info.samplerate == SAMPLE_RATE );
+	m_cutSize = thaw.fileSize();
+	m_frames = new StkFrames( thaw.fileSize(), N_CHANNELS );
 
-/*
-	cout << "channels: " << sf_info.channels << endl;
-	cout << "samplerate: " << sf_info.samplerate << endl; */
 
-/*
-	// Next, change the sample rate of the soundfile to 44100Hz
-	SRC_DATA params;
-		
-	// Set input and output buffers
-	params.data_in = buffy;
-	params.data_out = m_buffy;
-
-	// Set rate ratio and number of frames
-	params.src_ratio = SAMPLE_RATE / sf_info.samplerate;
-	params.output_frames = params.input_frames = readcount; // ??? SAME NUMBER OF FRAMES??
-
-	m_cutSize = readcount;
-
-	// Resample and error check
-	if ( int error = src_simple ( &params, SRC_SINC_MEDIUM_QUALITY, N_CHANNELS ) )
-		cout << endl << "Error resampling " << path << ": " << error << endl; 
-
-	else */
-
-	cout << "Loaded " << path << " (" << sf_info.frames << " frames)" << endl;
+	thaw.read( *m_frames, 0, true );
 }
 
 
 //------------------------------------------------------------------------------
 // Cut::freeze( )
-// Saves the sample as a 44100Hz 24bit PCM Wav file in the given path
+//
 //------------------------------------------------------------------------------
 
 void Cut::freeze( const char* path )
 {
-/*	// Temporary buffer to put the downsampled audio data in
-	float buffy[ CUT_BUFFER_SIZE ];	
-	
-	SRC_DATA params;
-		
-	// Set input and output buffers
-	params.data_in = m_buffy;
-	params.data_out = buffy;
+	if ( !m_frames ) return;
 
-	// Set rate ratio and number of frames
-	params.src_ratio = FILE_SAMPLE_RATE / SAMPLE_RATE;
-	params.output_frames = params.input_frames = m_cutSize; // ?? SAME NUMBER OF FRAMES?
-	
-	if ( int error = src_simple ( &params, SRC_SINC_MEDIUM_QUALITY, N_CHANNELS ) )
-	{
-		cout << endl << "Error resampling TEST: " << error << endl;
-		return;
-	} */
+	FileWrite freeze;
 
-	SNDFILE* outfile;
-	SF_INFO sf_info;
-
-	sf_info.samplerate = SAMPLE_RATE;
-	sf_info.channels = N_CHANNELS;
-	sf_info.format = ( SF_FORMAT_WAV | SF_FORMAT_PCM_32 );
-
-	if ( !(outfile = sf_open( path, SFM_WRITE, &sf_info ) ) )
-	{
-		cout << "Error: could not open " << path << endl;
-		return;	
-	}
-
-	int frames = sf_write_float( outfile, (float *) &m_buffy[ m_start ], (m_cutSize - m_start) * N_CHANNELS );
-
-	cout << "Saved " << path << endl;
+	freeze.open( path, N_CHANNELS, FileWrite::FILE_WAV, FileWrite::STK_SINT16 );
+	freeze.write( *m_frames );
+	freeze.close();
 }
 
 
@@ -374,10 +342,25 @@ void Cut::writeTick( float sample )
 	
 	if ( m_writeHead >= CUT_BUFFER_SIZE )
 	{
-		m_writeOn = false;
-		m_cutSize = CUT_BUFFER_SIZE;
-
 		cout << "Buffer full!" << endl;
+
+		m_writeOn = false; // Stop writing to the buffer
+
+		// Set the length of buffer used
+		m_cutSize = m_writeHead; 
+		m_n_frames = m_writeHead;
+		m_start = 0; // Fresh cut
+
+		// Transfer data into StkFrames
+		m_frames = new StkFrames( m_n_frames, N_CHANNELS );
+		for ( int i = 0; i < m_cutSize; i++ )
+			(*m_frames)[i] = m_buffy[i];
+
+		// Refresh spectrogram texture if on the cutting board
+		if ( g_kitchen.m_board.m_cut == this ) 
+			m_tex_id = g_kitchen.m_board.m_spectrogram->generateTexture( this );
+		else 
+			m_tex_id = 0; // Otherwise just reset the texture
 	} 
 }
 
@@ -387,33 +370,30 @@ void Cut::writeTick( float sample )
 // 
 //------------------------------------------------------------------------------
 
-// Maybe make this read more than just one tick at once... ala .tick method
-
 float Cut::readTick()
 {
-	double sample = 0; // Return value
+	if ( !m_frames || !m_readOn ) return 0;
 
-	if ( !m_readOn ) return 0;
+//  =(
+//	StkFloat sample = tick( &m_readHead, m_playbackSpeed );
 
-/*
-	if ( m_playbackSpeed == 1.0f )
-		sample = m_buffy[ (unsigned int) m_readHead++ ] * pow( 20, m_volumeCoef );
+	StkFloat sample = 0; // return value
 
-	else
+	if ( m_readHead > m_cutSize - 1 ) 
 	{
-		for ( int i = 0; i < m_playbackSpeed; i++ )
-			sample += m_buffy[ (unsigned int) m_readHead + i ] * pow( 20, m_volumeCoef );
+		m_readHead = m_start;
+		if ( m_once ) m_readOn = false;
+	}
+	else if ( m_readHead < m_start ) m_readHead = m_cutSize - 3; // for reverse playback
 
-		sample = sample / (int) m_playbackSpeed;
-
-		m_readHead += m_playbackSpeed;
-	} */
-	
-	// TODO: have buffer frame values be interpolated by STK
-	
-	sample = m_buffy[ (unsigned int) m_readHead ] * pow( 20, m_volumeCoef );
+	sample = m_frames->interpolate( m_readHead );
 	m_readHead += m_playbackSpeed;
-	
+
+
+
+	// Adjust volume
+	sample *= pow( 20, m_volumeCoef );
+
 	if ( m_openEnv )
 	{
 		sample *= m_envFactor;
@@ -439,22 +419,30 @@ float Cut::readTick()
 		}
 	}
 
-	// When playback reaches the end of the used buffer ..
-	if ( m_readHead >= m_cutSize ) 
-	{
-		m_readHead = m_start;
-	
-		if ( m_once ) 
-		{
-			m_readOn = false;
-		}
-	}
+	if ( m_readHead == m_start  && m_once ) m_readOn = false;
 
-	// When reverse playback reaches the beginning ..
-	if ( m_readHead < m_start ) m_readHead = m_cutSize;
 
 	return sample; 
 }
+
+
+
+
+float Cut::tick( float *head, float n_frames )
+{
+	StkFloat frame = 0; // return value
+
+	if ( *head > m_cutSize - 1 && m_playbackSpeed > 0 )
+		*head = m_start;
+	
+	else if ( *head < m_start ) *head = m_cutSize - 10000; // for reverse playback
+
+	frame = m_frames->interpolate( *head );
+	*head += n_frames;
+
+	return frame;
+}
+	
 
 
 //-----------------------------------------------------------------------------
@@ -466,21 +454,10 @@ float Cut::tick( unsigned int start, float * buffer, int n_frames )
 {
 	assert( start < m_cutSize );
 
-	int index = start;
+	float head = (float) start;
 
 	for ( int i = 0; i < n_frames; i++ )
-	{
-		if ( index + i >= m_cutSize ) index -= (m_cutSize - m_start);
-
-		buffer[i] = m_buffy[ m_start + index + i ] * pow( 20, m_volumeCoef );
-	}
-}
-
-
-void Cut::addFx( Sauce * fx )
-{
-	// TODO
-	m_fx = new EchoS();
+		buffer[i] = tick( &head, 1 );
 }
 
 

@@ -11,8 +11,8 @@
 #define __DEFS__
 
 // File system settings
-#define DEFAULT_INGREDIENTS_DIR "recipe/"
-#define WORKING_DIR "temp/"
+#define DEFAULT_INGREDIENTS_DIR "recipe"
+#define WORKING_DIR "temp"
 #define SNDFILE_EXT .wav
 
 // Hardware settings
@@ -20,7 +20,7 @@
 #define DEFAULT_OUT_DEVICE 2
 
 #define SAMPLE double
-#define N_CHANNELS 2
+#define N_CHANNELS 1
 #define SAMPLE_RATE 44100
 #define FILE_SAMPLE_RATE 44100 // Lower this
 #define BUFFER_FRAMES 512 * N_CHANNELS
@@ -43,7 +43,7 @@
 #define TWOPI 2 * PIE
 
 #define BOARD_X -6.5
-#define BOARD_Y -4.1
+#define BOARD_Y -4
 #define BOARD_WIDTH BOARD_X * -2
 #define BOARD_HEIGHT BOARD_Y * -2
 
@@ -52,5 +52,12 @@
 
 // Buffer size: seconds of audio at 44100 Hz 
 #define CUT_BUFFER_SIZE 44100 * 2 * 30
+
+#define DEFAULT_WINDOW_WIDTH 960
+#define DEFAULT_WINDOW_HEIGHT 600
+
+#define TEXT_BUFFER_SIZE 512
+#define GLUT_FONT_LARGE GLUT_BITMAP_HELVETICA_18
+#define GLUT_FONT_SMALL GLUT_BITMAP_HELVETICA_12
 
 #endif

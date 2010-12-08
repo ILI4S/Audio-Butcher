@@ -6,7 +6,7 @@
 //------------------------------------------------------------------------------
 
 #include "stk/Stk.h"
-#include "stk/PitShift.h"
+//#include "stk/PitShift.h"
 #include "stk/LentPitShift.h"
 #include "defs.h"
 #include "kitchen.h"
@@ -72,7 +72,7 @@ void CuttingBoard::draw()
 	{
 		m_spectrogram->draw( BOARD_X, BOARD_Y, m_cut->m_tex_id );
 	
-
+/*
 		for ( int i = 0; i < 10; i++ )
 		{
 			float pos = m_cut->m_marks[ i ];
@@ -85,7 +85,6 @@ void CuttingBoard::draw()
 							(float) (m_cut->m_cutSize - m_cut->m_start) )
 							* BOARD_WIDTH + BOARD_X;
 
-		/*		cout << "printing mark " << i << " with x " << x << endl; */
 				
 //j				char number[1];
 //				number = itoa( i, number, 10 );
@@ -101,7 +100,7 @@ void CuttingBoard::draw()
 				glVertex2f( x, -4.1 );
 				glEnd();
 			}
-		}
+		} */
 
 		// Draw current playback line
 		if ( m_cut->m_readHead )
@@ -112,8 +111,8 @@ void CuttingBoard::draw()
 
 			glBegin( GL_LINES );
 			glColor3f( 1, 1, 1 );
-			glVertex2f( x, 3.9 );
-			glVertex2f( x, -4.1 );
+			glVertex2f( x, 4 );
+			glVertex2f( x, -4 );
 		}
 
 		glEnd();
@@ -135,8 +134,6 @@ void CuttingBoard::draw()
 
 void CuttingBoard::select( Cut * cut )
 {
-	cout << endl << "selected " << cut << endl;
-
 	if ( m_cut && m_cut->m_readOn ) m_cut->m_readOn = false;
 
 	m_cut = cut;
@@ -155,11 +152,24 @@ void CuttingBoard::put( Cut * cut )
 {
 	if ( !m_cut ) return;
 
-	m_cut->tick( 0, (float *) &cut->m_buffy, 
-				 m_cut->m_cutSize - m_cut->m_start );
+	// TODO: this should call a clone function of Cut
 
+//	m_cut->tick( 0, (float *) &cut->m_buffy, 
+//				 m_cut->m_cutSize - m_cut->m_start );
+
+	cut->m_n_frames = m_cut->m_n_frames;
 	cut->m_cutSize = m_cut->m_cutSize - m_cut->m_start;
 	cut->m_readHead = cut->m_start = 0;
+
+	cut->m_start = 0;
+
+/*	cut->m_frames = new StkFrames( m_cut->m_n_frames, N_CHANNELS );
+	for ( int i = 0; i < m_cut->m_n_frames; i++ )
+		(*cut->m_frames)[i] = (*m_cut->m_frames)[i];*/
+
+	cut->m_frames = new StkFrames( m_cut->m_cutSize - m_cut->m_start, N_CHANNELS );
+	for ( int i = m_cut->m_start; i < m_cut->m_cutSize; i++ )
+		(*cut->m_frames)[i - m_cut->m_start] = (*m_cut->m_frames)[i];
 
 	cut->m_tex_id = m_spectrogram->generateTexture( cut );
 	select( cut );
@@ -177,10 +187,17 @@ void CuttingBoard::rollLoop( bool record, bool recut )
 	{
 		glClearColor( 0, 0, 0, 0 );
 
-		m_loop.m_writeOn = false;
-		if ( recut ) m_loop.m_cutSize = m_loop.m_writeHead;
+		m_loop.m_writeOn = false; // Stop writing to the buffer
 
-	 	m_loop.m_readHead = m_loop.m_start; // Reset the previous buffer's
+		// Set the length of buffer used
+		if ( recut ) m_loop.m_cutSize = m_loop.m_writeHead; 
+		m_loop.m_n_frames = m_loop.m_cutSize;
+		m_loop.m_readHead = m_loop.m_start = 0; // Fresh cut
+
+		// Transfer data into StkFrames
+		m_loop.m_frames = new StkFrames( m_loop.m_n_frames, N_CHANNELS );
+		for ( int i = 0; i < m_loop.m_cutSize; i++ )
+			(*m_loop.m_frames)[i] = m_loop.m_buffy[i];
 
 		// should replace this with the next commented line
 		m_loop.m_tex_id = 0;
@@ -220,11 +237,17 @@ void CuttingBoard::resize( bool extend, bool end )
 	// Modify the end of the sample
 	if ( end )
 	{
-		if ( extend && m_cut->m_cutSize < CUT_BUFFER_SIZE - RESIZE_INCREMENT )
+		if ( extend && m_cut->m_cutSize < m_cut->m_n_frames - RESIZE_INCREMENT )
+		{
 			m_cut->m_cutSize += RESIZE_INCREMENT;
+			//m_cut->m_frames->resize( m_cut->m_cutSize, N_CHANNELS );
+		}
 
 		else if ( !extend && m_cut->m_cutSize - RESIZE_INCREMENT > 0 )
+		{
 			m_cut->m_cutSize -= RESIZE_INCREMENT;
+			//m_cut->m_frames->resize( m_cut->m_cutSize, N_CHANNELS );
+		}
 	}
 
 	// Modify the beginning of the sample
@@ -277,21 +300,13 @@ void CuttingBoard::shiftPitch( bool increase ) // TODO: implement increase/decre
 {
 	if ( !m_cut ) return;
 
-/*	StkFrames frames( m_cut->m_cutSize - m_cut->m_start, 2 );
-
-	m_cut->tick( 0, (float *) &frames[0], 
-				 m_cut->m_cutSize - m_cut->m_start );
-
 	LentPitShift pitShift;
-	pitShift.setShift( 1.2f );
-	pitShift.tick( frames, 0 );
-	pitShift.tick( frames, 1 ); 
 
-	for ( int i = 0; i < m_cut->m_cutSize - m_cut->m_start; i++ )
-	{
-		m_cut->m_buffy[ m_cut->m_start + i ] = frames[i];
-	} */
+	if ( increase ) pitShift.setShift( pow(2.0f, 1.0f/12.0f) );
+	else pitShift.setShift( 1.0f / pow(2.0f, 1.0f/12.0f) );
 
+	pitShift.tick( *m_cut->m_frames, 0 );
+/*
 	LentPitShift pitShift;
 	pitShift.setShift( 1.2f );
 
@@ -303,6 +318,7 @@ void CuttingBoard::shiftPitch( bool increase ) // TODO: implement increase/decre
 	}
 
 	m_cut->m_tex_id = m_spectrogram->generateTexture( m_cut );
+*/
 }
 
 
@@ -320,7 +336,6 @@ void CuttingBoard::adjustCursor( int direction )
 		//g_kitchen.m_board.m_cut->m_playbackSpeedTarget = -.5f;
 		g_kitchen.m_board.m_cut->m_playbackSpeed = -.5f;
 		g_kitchen.m_board.m_cut->m_readOn = true;
-		cout << "LEFT";
 	}	
 	else if ( direction == RIGHT ) // Forward slowed playback
 	{
@@ -353,7 +368,6 @@ void CuttingBoard::chop( int direction )
 		m_cut->m_cutSize = m_cut->m_readHead;
 
 	m_cut->m_tex_id = m_spectrogram->generateTexture( m_cut );
-	cout << "eh?";
 }
 
 
@@ -452,7 +466,7 @@ unsigned int Spectrogram::generateTexture( Cut * cut )
 
 	for( int x = 0; x < SG_WIDTH; x++ )
 	{	
-		cut->tick( (unsigned int) (x * time_res + .5f), 
+		cut->tick( (unsigned int) (x * time_res + .5f) + cut->m_start, 
 				   (float *) &m_buffer, m_wnd_size * 2 );		
 
 /*

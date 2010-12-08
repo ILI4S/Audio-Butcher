@@ -10,13 +10,6 @@
 
 #include <GLUT/glut.h>
 
-#define DEFAULT_WINDOW_WIDTH 960
-#define DEFAULT_WINDOW_HEIGHT 600
-
-#define TEXT_BUFFER_SIZE 512
-#define GLUT_FONT_LARGE GLUT_BITMAP_HELVETICA_18
-#define GLUT_FONT_SMALL GLUT_BITMAP_HELVETICA_12
-
 
 //-----------------------------------------------------------------------------
 // Class definitions

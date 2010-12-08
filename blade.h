@@ -8,12 +8,10 @@
 #ifndef __SAMPLER__
 #define __SAMPLER__
 
-#include "sauce.h"
-
-
+// TODO: Implement scratching
 #define SCRATCH_DISTANCE 44100
 
-
+using namespace stk;
 
 //------------------------------------------------------------------------------
 //
@@ -27,6 +25,7 @@ class Cut
 public: 
 
 	Cut(); // Constructor
+	~Cut(); // Destructor
 
 	void clear();
 	
@@ -40,9 +39,9 @@ public:
 	// Reading interface (serving)
 	float readTick();
 
-	float tick( unsigned int start, float * buffer, int n_frames );
+	float tick( float * head, float n_frames );
 
-	void addFx( Sauce * fx );
+	float tick( unsigned int start, float * buffer, int n_frames );
 
 	void gotoMark( unsigned int x );
 	void setMark( unsigned int x );
@@ -56,7 +55,7 @@ public:
 	unsigned int m_cutSize;
 	unsigned int m_start; 
 	
-	float m_playbackSpeed;//, m_playbackSpeedTarget;
+	double m_playbackSpeed;//, m_playbackSpeedTarget;
 	float m_volumeCoef;//, m_volumeCoefTarget;
 
 	// Flag active read or writes
@@ -65,9 +64,13 @@ public:
 	// Head positions in the buffer
 	float m_writeHead, m_readHead;
 
+	// Used as buffer while cutting / writing
 	float m_buffy[ CUT_BUFFER_SIZE ];
 
-	Sauce *m_fx;
+	StkFrames *m_frames;
+	unsigned int m_n_frames;
+
+	//Sauce *m_fx;
 
 	unsigned int m_tex_id;		
 

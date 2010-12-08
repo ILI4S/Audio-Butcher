@@ -6,6 +6,7 @@
 //------------------------------------------------------------------------------
 
 #include "defs.h"
+#include "stk/Stk.h"
 #include "kitchen.h"
 #include <string>
 #include <stdio.h>
@@ -66,7 +67,7 @@ void Kitchen::thawIngredients( const char* path )
 	// Iterate over each cut
 	for ( int i = 0; i < 26; i++ )
 	{
-		string filename = string( path ) + (char) (i + 65) + ".wav";
+		string filename = string( path ) + "/" + (char) (i + 65) + ".wav";
 
 		// If a file exists, load it 
 		struct stat stFileInfo;
@@ -74,7 +75,6 @@ void Kitchen::thawIngredients( const char* path )
 		if ( !stat( filename.c_str(), &(stFileInfo) ) )
 		{
 			m_cuts[i].thaw( filename.c_str() );
-			
 		}
 	}
 
@@ -89,26 +89,43 @@ void Kitchen::thawIngredients( const char* path )
 			string line;
 			getline( paramFile, line ); 
 
+			// TODO: Make this a method of Cut
 			// A:
 			// [volume coefficient]
 			// [playback rate]
+			// [start frame]
 			if ( line[1] == ':' )
 			{
-				string volumeLine, speedLine;
-				float volume = 1.0f, speed = 1.0f;
-
-				// Read volume data from file 
-				getline( paramFile, volumeLine ); 
-				sscanf( volumeLine.c_str(), "%f", &volume );
-
-				// Read playback speed data from file 
-				getline( paramFile, speedLine ); 
-				sscanf( speedLine.c_str(), "%f", &speed );
-
-				// Store values in correct objects
 				unsigned int index = (unsigned int) (line[0] - 65);
-				m_cuts[ index ].m_volumeCoef = volume;
-				m_cuts[ index ].m_playbackSpeed = speed;
+				if ( m_cuts[ index ].m_frames )
+				{
+
+					string volumeLine, speedLine, startLine, endLine;
+					float volume = 1.0f, speed = 1.0f;
+					unsigned int start = 0, end = 0;
+
+					// Read volume data from file 
+					getline( paramFile, volumeLine ); 
+					sscanf( volumeLine.c_str(), "%f", &volume );
+
+					// Read playback speed data from file 
+					getline( paramFile, speedLine ); 
+					sscanf( speedLine.c_str(), "%f", &speed );
+
+					// Starting frame
+					getline( paramFile, startLine ); 
+					sscanf( startLine.c_str(), "%d", &start );
+
+					// Ending frame
+					getline( paramFile, endLine ); 
+					sscanf( endLine.c_str(), "%d", &end );
+
+					// Store values in correct objects
+					m_cuts[ index ].m_volumeCoef = volume;
+					m_cuts[ index ].m_playbackSpeed = speed;
+					m_cuts[ index ].m_start = start;
+					m_cuts[ index ].m_cutSize = end;
+				}
 			}
 		}
 	}
@@ -145,15 +162,18 @@ void Kitchen::freezeIngredients( const char* path )
 		// If it has been cut save it
 		if ( m_cuts[i].m_cutSize )
 		{
-			string filename = string( path ) + (char) (i + 65) + ".wav";
+			string filename = string( path ) + "/" + (char) (i + 65) + ".wav";
 
 			m_cuts[i].freeze( filename.c_str() );
 
+			// TODO: Make this a method of Cut
 			if ( paramFile.is_open() )
 			{
 				paramFile << (char) (i + 65) << ":" << endl;
 				paramFile << m_cuts[i].m_volumeCoef << endl;
 				paramFile << m_cuts[i].m_playbackSpeed << endl;
+				paramFile << m_cuts[i].m_start << endl;
+				paramFile << m_cuts[i].m_cutSize << endl;
 			}
 		}
 
@@ -172,7 +192,7 @@ void Kitchen::cleanFridge( const char* path )
 {
 	for ( int i = 0; i < 26; i++ )
 	{
-		string filename = string( path ) + (char) (i + 65) + ".wav";
+		string filename = string( path ) + "/" + (char) (i + 65) + ".wav";
 		
 		remove( filename.c_str() );
 	}	

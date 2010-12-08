@@ -2,16 +2,15 @@ UNAME := $(shell uname)
 
 CC=g++
 
-STK_SOURCES = stk/Stk.o stk/PitShift.o stk/DelayL.o stk/Delay.o stk/LentPitShift.o stk/Echo.o
-SOURCES = butcher.o RtAudio.o blade.o board.o kitchen.o interface.o graphics.o sauce.o $(STK_SOURCES)
+STK_SOURCES = stk/Stk.o stk/FileRead.o stk/FileWrite.o stk/LentPitShift.o stk/Delay.o
+SOURCES = $(STK_SOURCES) butcher.o RtAudio.o blade.o board.o kitchen.o interface.o graphics.o
 OBJECTS = $(SOURCES:.cpp=.o)
 EXECUTABLE = butcher
 
 CFLAGS= -D__MACOSX_CORE__ -c -g
 LIBS=-framework CoreAudio -framework CoreMIDI -framework CoreFoundation \
 	 -framework IOKit -framework Carbon \
-	 -framework OpenGL -framework GLUT -framework Foundation -framework AppKit \
-	 -lsndfile -lm
+	 -framework OpenGL -framework GLUT -framework Foundation -framework AppKit
 
 all:	$(SOURCES) $(EXECUTABLE)
 

@@ -32,18 +32,26 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 DESCRIPTION:
 
-Audio Butcher is a minimal, real-time audio sampling and sequencing application that turns your laptop into a remixing music production center.
+Audio Butcher is a minimal, real-time audio sampling and sequencing application that turns your laptop into a music production center.
+
+Use it to carve any audio output and serve premium cuts of audio samples. An unfathomable variety of sounds are already accesible on your iTunes, on YouTube, and other computer applications for your remixing pleasure.
+
+FileWrite: creating WAV file: temp/N.wav
+
+
+FileWrite: creating WAV file: temp/O.wav
 
 
 INSTALL:
 
-Audio Butcher compiles on Mac OS X 10.6.4. No clue if it compiles on anything else. Mac OS X just run make on the source and run the resulting executable from the command line (see further instructions).
+Audio Butcher compiles on Mac OS X 10.6.4. No clue if it compiles on anything else. On Mac OS X either download the binary or run make on the source and run the resulting executable from the command line (see further instructions).
+
+Audio Butcher requires Soundflower to reroute your audio output to Audio Butcher. After installing Soundflower from http://cycling74.com/products/soundflower/ set your audio output to Soundflower (2ch) and run Audio Butcher with the appropriate channel settings. (Channels are listed in Terminal when Audio Butcher is run).
 
 
 DEPENDENCIES:
 
-soundflower
-libsndfile
+Soundflower
 
 
 COMMAND LINE USAGE:
@@ -61,35 +69,30 @@ COMMANDS:
 Input is 99% keyboard based.
 All commands ARE case sensitive.
 
-	A-Z		Record / cut audio buffers 
-	a-z		Playback / serve audio buffers 
-	1-0		Play with sound effects
-	esc		Cancel and save to /temp					TODO
-	esc esc	Exit	
+	A-Z			Record / cut audio buffers 
+	a-z			Playback / serve audio buffers 
+	1-0			Play with sound effects
+	esc			Save to /temp
+	esc esc		Exit	
 
-	_		Load recipe to audio buffers.
-	+		Save recipe to harddisk
+	shift -		Reload audio files						
+	shit =		Save audio buffers to files				
+
+	+			Increase gain of playing (but not looping) buffers
+	=			Decrease gain of playing (but not looping) buffers
+
+	tab			Restart playing (but not looping) buffers
+
 
 Follow these commands with any buffer key ( a-z ):
 
-	` 		Display spectrogram of audio buffer on cutting board
-	~		Save cutting board audio buffer to key
-	del 	Delete that audio buffer
-	enter	Play sample once and then stop (no looping) TODO
+	` 			Display spectrogram of audio buffer on cutting board
+	shift `		Save cutting board audio buffer to key
+	del 		Delete that audio buffer
+	enter		Play sample once and then stop
+	space		Loop sample indefinitely
 
 Cutting board controls:
-
-	del 		Delete to the left of the marker
-	alt del		Delete to the right of the marker
-
-	+			Increase gain							
-	=			Decrease gain							
-
-	_			Increase pitch							TODO
-	-			Decrease pitch							TODO
-
-	alt -		Reload audio files						REMAP
-	alt =		Save audio buffers to files				REMAP
 
 	[			Shorten start (left)
 	]			Pad start (left)
@@ -100,18 +103,16 @@ Cutting board controls:
 	alt + [		Clip left of cursor
 	alt + ]		Clip right of cursor
 
+	enter		Play cutting board sample once and then stop
+	space		Loop cutting board sample indefinitely
+
+	,			Pitch shift down
+	. 			Pitch shift up
+
 	alt		Roll a loop by holding down while playing back audio buffers	
-			The resulting buffer is mapped to the cutting board.
+			The resulting buffer is mapped to the cutting board, from where it must be mapped to a buffer with shift ` [buffer key]
 
 
 
-Audio Butcher slays your audio output and for you to serve your audience premium cuts of ______ audio samples.
-
-Multimedia sampling software, that turns audio and visual output, whinto digital vinyl cuts that can be 
 
 
-TOOD NOW:
-	
-	envelope playback after stopServe -- make not linear?
-
-	cutting board put crashed

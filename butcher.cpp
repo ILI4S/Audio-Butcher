@@ -42,6 +42,7 @@
 //
 //------------------------------------------------------------------------------
 
+#include "stk/Stk.h"
 #include "defs.h"
 #include "kitchen.h"
 #include "graphics.h"
@@ -104,12 +105,13 @@ int audioCallback ( void* outBuffer, void* inBuffer, unsigned int nBufferFrames,
 
 	for ( int i = 0; i < nBufferFrames * N_CHANNELS; i++ )
 	{
+		// Input is rerouted to output so just add to it
 		in[i] += g_kitchen.m_blade.readTick();
 
+		// Feed back into writing
 		g_kitchen.m_blade.writeTick( in[i] );
 
-		out[i] = in[i]; 
-		//out[i] = 0; // Airplane control
+		out[i] = in[i]; // Reroute input (soundflower) to audio output
 	}
 
 	return 0;
